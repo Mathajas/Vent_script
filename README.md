@@ -41,8 +41,16 @@ The script continuously monitors the average humidity reported by your specified
     *   Click the **dzVents** tab.
     *   Create a new dzVents script (e.g., "Lua").
     *   Copy and paste the provided script code into the script editor.
+    *   Click the "Off" and then the "Save" button in the dzVents script editor.
+  
+3.  **Create user Variables:**  Click **Setup** -> **More Options** -> **User Variables**:
+      Fan_turn_on_in_min, value 0
+      lastHumidity, value 0
+      lastHumidity1min, value 0
+      lastRunTime, value 0
+      lastHumidityUpdate, value 0
 
-3.  **Customize the Script:**
+5.  **Customize the Script:**
     *   **`FAN_NAME`:**  Change `'Wentylator'` to the exact name of your controllable device as it appears in Domoticz.
     *   **`HUMIDITY_SENSOR_NAMES`:**  Modify the array `{'9A2CBF ATC-hum', '834A61 ATC-hum'}` to include the names of your humidity sensors in Domoticz. You can add or remove sensor names as needed. Ensure the names match exactly.
     *   **`TARGET_HUM`:** Adjust the target humidity level (default: `65`). The "Fun" device will activate when the average humidity exceeds this percentage.
@@ -53,7 +61,8 @@ The script continuously monitors the average humidity reported by your specified
     *   **`HUMIDITY_DELTA_FUN_TIME`:** Set the run time in minutes for the "Fun" device when a rapid humidity increase is detected (default: `10`).
     *   **`HUMIDITY_UPDATE_INTERVAL`:**  Interval in seconds for updating the humidity history (default: `300` seconds = 5 minutes).  Generally, you should not need to change this.
 
-4.  **Save the Script:**  Click the "Save" button in the dzVents script editor.
+6.  **Save the Script:**  Click the "Save" button in the dzVents script editor.
+
 
 ## Contributing
 
