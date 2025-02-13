@@ -31,7 +31,8 @@ return {
         lastHumidity1min = { initial = 0 },     
         lastRunTime = { initial = 0 },         
         lastHumidityUpdate = { initial = 0 },    
-        Fan_turn_on_in_min = { initial = 0 }    
+        Fan_turn_on_in_min = { initial = 0 },   
+        canRunAgain = { initial = 1 }
     },
     execute = function(domoticz)
         local FAN_NAME = 'Wentylator'                                           -- Name of the Domoticz device that controls the fan (replace 'Wentylator' with your fan device name)
@@ -48,31 +49,32 @@ return {
         local function getAverageHumidity()
             local sum, count = 0, 0
             for _, sensor in ipairs(HUMIDITY_SENSOR_NAMES) do     
-                local value = domoticz.devices(sensor).humidity    -- Get humidity value from each sensor
-                if value > 0 then                                 -- Consider only valid humidity readings (greater than 0)
+                local value = domoticz.devices(sensor) and domoticz.devices(sensor).humidity or 0
+                if value > 0 then
                     sum = sum + value                             
                     count = count + 1                             
                 end
             end
-            return count > 0 and (sum / count) or 0              -- Return the average humidity if there are valid readings, otherwise return 0
+            return count > 0 and (sum / count) or 0
         end
 
         local current_humidity = getAverageHumidity()             
         local currentTime = os.time()                            
-        local lastRunTime = domoticz.data.lastRunTime             
-        local lastHumidity = domoticz.data.lastHumidity          
-        local lastHumidity1min = domoticz.data.lastHumidity1min    
+        local lastRunTime = domoticz.data.lastRunTime or 0              
+        local lastHumidity = domoticz.data.lastHumidity or 0        
+        local lastHumidity1min = domoticz.data.lastHumidity1min or 0   
         local lastHumidityUpdate = domoticz.data.lastHumidityUpdate 
         local canRunAgain = (currentTime - lastRunTime) >= (BREAK_TIME * 60)    -- Check if enough break time has passed since the last fan run
-        local Fan_turn_on_in_min = domoticz.data.Fan_turn_on_in_min 
+        local Fan_turn_on_in_min = domoticz.data.Fan_turn_on_in_min or 0
 
+        
         -- Debug logging to track the 'Fun_turn_on_in_min' value before script logic
         domoticz.log('Fun time before script:' .. Fan_turn_on_in_min .. ' minutes.', domoticz.LOG_INFO)
 
         -- Update humidity history every 5 minutes
         if (currentTime - lastHumidityUpdate) >= HUMIDITY_UPDATE_INTERVAL then
             lastHumidity = lastHumidity1min                                                         -- Update the 5-minute humidity history with the last 1-minute value
-            --domoticz.log('Humidity every 5 min:' .. current_humidity .. '%', domoticz.LOG_STATUS) -- Optional: Log humidity every 5 minutes to Domoticz status
+            domoticz.log('Humidity every 5 min:' .. current_humidity .. '%', domoticz.LOG_STATUS) -- Optional: Log humidity every 5 minutes to Domoticz status
             domoticz.data.lastHumidityUpdate = currentTime                                          -- Update the timestamp of the last humidity history update
         end
 
@@ -94,13 +96,21 @@ return {
         end
 
         -- Hourly ventilation logic
-        if domoticz.time.minutes == 0 and Fan_turn_on_in_min < HOURLY_VENT_DURATION and canRunAgain then            -- If it's the start of the hour, fan run time is less than hourly duration, and break time has passed
-            Fan_turn_on_in_min = HOURLY_VENT_DURATION              -
+        if domoticz.time.minutes == 0 and ( Fan_turn_on_in_min < HOURLY_VENT_DURATION ) and canRunAgain then            -- If it's the start of the hour, fan run time is less than hourly duration, and break time has passed  
+            Fan_turn_on_in_min = HOURLY_VENT_DURATION
             domoticz.log('Hourly vent, Turning on fan.', domoticz.LOG_INFO) 
         end
-
+        
         -- Fan control logic: Turn fan on or off based on 'Fan_turn_on_in_min'
-        local fan = domoticz.devices(FAN_NAME)                                                          
+        local fan = domoticz.devices(FAN_NAME)  
+        --domoticz.log('current_humidity: ' .. tostring(current_humidity), domoticz.LOG_INFO)
+        --domoticz.log('lastHumidity: ' .. tostring(lastHumidity), domoticz.LOG_INFO)
+        --domoticz.log('lastHumidity1min: ' .. tostring(lastHumidity1min), domoticz.LOG_INFO)
+        --domoticz.log('Fan_turn_on_in_min: ' .. tostring(Fan_turn_on_in_min), domoticz.LOG_INFO)
+        --domoticz.log('canRunAgain: ' .. tostring(canRunAgain), domoticz.LOG_INFO)
+        --domoticz.log('domoticz.time.minutes: ' .. tostring(domoticz.time.minutes), domoticz.LOG_INFO)
+        --domoticz.log('fan: ' .. tostring(fan), domoticz.LOG_INFO)
+        --domoticz.log('fan.state: ' .. tostring(fan.state), domoticz.LOG_INFO)
         if Fan_turn_on_in_min > 0 and fan.state == 'Off' then                                           -- If fan run time is positive and fan is currently off
             fan.switchOn().forMin(Fan_turn_on_in_min)                                                   -- Turn the fan on for 'Fan_turn_on_in_min' minutes
             domoticz.data.lastRunTime = currentTime                                                     
